@@ -12,10 +12,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Bun
+      - name: Install Bun (FIXED)
         run: |
           curl -fsSL https://bun.sh/install | bash
-          echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $GITHUB_ENV
+          export PATH="$HOME/.bun/bin:$PATH"
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+          bun --version
 
       - name: Install dependencies
         run: bun install
@@ -29,12 +31,19 @@ jobs:
       - name: Start Backend + Tunnel
         run: |
           bun run src/app.ts > server.log 2>&1 &
-          sleep 5
-          ./cloudflared tunnel --url http://localhost:3551 > tunnel.log 2>&1 &
           sleep 10
+          ./cloudflared tunnel --url http://localhost:3551 > tunnel.log 2>&1 &
+          sleep 15
           echo "========== BACKEND LINK =========="
-          grep -o 'https://[-a-z0-9]*\.trycloudflare.com' tunnel.log | head -n 1
+          grep -o 'https://[-a-z0-9]*\.trycloudflare.com' tunnel.log | head -n 1 || echo "NO LINK FOUND"
           echo "=================================="
+
+      - name: Show Logs
+        run: |
+          echo "===== SERVER LOG ====="
+          cat server.log || true
+          echo "===== TUNNEL LOG ====="
+          cat tunnel.log || true
 
       - name: Keep Alive
         run: sleep 21600
